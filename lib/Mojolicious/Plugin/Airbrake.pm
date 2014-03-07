@@ -13,7 +13,9 @@ has 'api_key';
 has 'airbrake_base_url' => 'https://airbrake.io/api/v3/projects/';
 has 'ua' => sub { Mojo::UserAgent->new() };
 has 'project_id';
-has 'pending_exceptions' => sub { {} };
+has 'pending' => sub { {} };
+has 'include_session' => 1;
+has 'debug' => 0;
 
 has url => sub {
   my $self = shift;
@@ -22,12 +24,15 @@ has url => sub {
 };
 
 has user_id_sub_ref => sub {
-  return 'n/a';
+  return sub {
+    return 'n/a';
+  }
 };
 
 sub register {
   my ($self, $app, $conf) = (@_);
   $conf ||= {};
+  $self->{$_} = $conf->{$_} for keys %$conf;
 
   $self->_hook_after_dispatch($app);
   $self->_hook_on_message($app);
@@ -46,7 +51,7 @@ sub _hook_after_dispatch {
       # because if the same exception is logged several times within a
       # 2-second period, we want the logger to ignore it.
       $self->pending->{$ex} = 0 if defined $self->pending->{$ex};
-      $self->notify($ex, $c);
+      $self->notify($ex, $app, $c);
     }
 
   });
@@ -70,7 +75,7 @@ sub _hook_on_message {
         # Wait 2 seconds before we handle it; if the exception happened in
         # a request we want the after_dispatch-hook to handle it instead.
         Mojo::IOLoop->timer(2 => sub {
-          $self->notify($ex) if delete $self->pending->{$ex};
+          $self->notify($ex, $app) if delete $self->pending->{$ex};
         });
       }
 
@@ -78,14 +83,27 @@ sub _hook_on_message {
 }
 
 sub notify {
-  my ($self, $ex, $c) = @_;
+  my ($self, $ex, $app, $c) = @_;
 
-  $self->ua->post($self->url => {'Content-Type' => 'application/json'} => $self->_json_content($ex, $c), sub {} );
+  my $call_back = sub { };
+
+  if($self->debug) {
+    $call_back = sub { 
+      print STDERR "Debug airbrake callback: " . Dumper(\@_);
+    };
+  }
+
+
+  my $tx = $self->ua->post($self->url => json => $self->_json_content($ex, $app, $c), $call_back );
+
+
+
 }
 
 sub _json_content {
   my $self = shift;
   my $ex = shift;
+  my $app = shift;
   my $c = shift;
 
   my $json = {
@@ -96,31 +114,37 @@ sub _json_content {
     }
   };
 
-  $json->{errors} = [
+  $json->{errors} = [{
     type => ref $ex,
     message => $ex->message,
     backtrace => [],
-  ];
+  }];
 
   foreach my $frame (@{$ex->frames}) {
     my ($package, $file, $line, $subroutine) = @$frame;
-    push @{$json->{errors}->{backtrace}}, {
+    push @{$json->{errors}->[0]->{backtrace}}, {
       file => $file, line => $line, function => $subroutine
     };
   }
 
   $json->{context} = {
-    environment => $c->app->mode,
-    rootDirectory => $c->app->home,
-    url => $c->req->url->to_abs,
-    component => ref $c,
-    action => $c->stash('action'),
-    userId => $self->user_id_sub_ref()
+    environment => $app->mode,
+    rootDirectory => $app->home
   };
 
- $json->{environment} = { map { $_ => "".$c->req->headers->header($_) } (@{$c->req->headers->names}) };
- $json->{params} = { map { $_ => string_dump($c->stash('snapshot')->{$_})  } (keys %{$c->stash('snapshot')}) };
- $json->{session} = { map { $_ => string_dump($c->session($_))  } (keys %{$c->session}) };
+  if($c) {
+
+    $json->{url} = $c->req->url->to_abs;
+    $json->{component} = ref $c;
+    $json->{action} = $c->stash('action');
+    $json->{userId} = $self->user_id_sub_ref($c);
+
+    $json->{environment} = { map { $_ => "".$c->req->headers->header($_) } (@{$c->req->headers->names}) };
+    $json->{params} = { map { $_ => string_dump($c->param($_))  } ($c->param) };
+    $json->{session} = { map { $_ => string_dump($c->session($_))  } (keys %{$c->session}) } if $self->include_session;
+  }
+
+  return $json;
 
 }
 
