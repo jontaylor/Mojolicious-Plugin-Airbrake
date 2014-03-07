@@ -137,7 +137,7 @@ sub _json_content {
     $json->{url} = $c->req->url->to_abs;
     $json->{component} = ref $c;
     $json->{action} = $c->stash('action');
-    $json->{userId} = $self->user_id_sub_ref($c);
+    $json->{userId} = $self->user_id_sub_ref->($c);
 
     $json->{environment} = { map { $_ => "".$c->req->headers->header($_) } (@{$c->req->headers->names}) };
     $json->{params} = { map { $_ => string_dump($c->param($_))  } ($c->param) };
