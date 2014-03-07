@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Mojolicious-Plugin-Airbrake.t
+lib/Mojolicious/Plugin/Airbrake.pm
