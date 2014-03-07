@@ -125,7 +125,7 @@ sub _json_content {
 }
 
 sub string_dump {
-  $obj = shift;
+  my $obj = shift;
   ref $obj ? Dumper($obj) : $obj;
 }
 
