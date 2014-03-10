@@ -110,7 +110,7 @@ sub _json_content {
     notifier => {
       name => 'Mojolicious::Plugin::Airbrake',
       version => $VERSION,
-      url => 'stackhaus.com'
+      url => 'https://github.com/jontaylor/Mojolicious-Plugin-Airbrake'
     }
   };
 
