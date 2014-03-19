@@ -164,12 +164,13 @@ Mojolicious::Plugin::Airbrake
 =head1 SYNOPSIS
 
   $self->plugin('Airbrake' => {
-    key => "",
-    url => ""
+    api_key => "yourapikey",
+    project_id => "ID from airbrake for the project"
   });
 
 =head1 DESCRIPTION
 
+Submit application errors to Airbrake.io
 
 =head2 EXPORT
 
