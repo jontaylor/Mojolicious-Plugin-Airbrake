@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME              => 'Mojolicious::Plugin::Airbrake',
     VERSION_FROM      => 'lib/Mojolicious/Plugin/Airbrake.pm', # finds $VERSION
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
+    PREREQ_PM         => { 'Mojo::Base' => 0 }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/Mojolicious/Plugin/Airbrake.pm', # retrieve abstract from module
        AUTHOR         => 'Jonathan Taylor <jon@stackhaus.com>') : ()),
