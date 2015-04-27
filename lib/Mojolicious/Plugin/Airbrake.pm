@@ -7,7 +7,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::UserAgent;
 use Data::Dumper;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 has 'api_key';
 has 'airbrake_base_url' => 'https://airbrake.io/api/v3/projects/';
@@ -89,10 +89,11 @@ sub notify {
 
   if($self->debug) {
     $call_back = sub { 
-      print STDERR "Debug airbrake callback: " . Dumper(\@_);
+      #$app->log->debug("Debug airbrake callback: " . Dumper(\@_));
     };
   }
 
+  return if $ex->message =~ /has no heartbeat, restarting/;
 
   my $tx = $self->ua->post($self->url => json => $self->_json_content($ex, $app, $c), $call_back );
 
