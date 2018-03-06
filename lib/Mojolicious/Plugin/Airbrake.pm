@@ -7,7 +7,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::UserAgent;
 use Data::Dumper;
 
-our $VERSION = '0.02';
+our $VERSION = '0.02-s1';
 
 has 'api_key';
 has 'airbrake_base_url' => 'https://airbrake.io/api/v3/projects/';
@@ -23,10 +23,8 @@ has url => sub {
   return $self->airbrake_base_url . $self->project_id . '/notices?key=' . $self->api_key;
 };
 
-has user_id_sub_ref => sub {
-  return sub {
-    return 'n/a';
-  }
+has user_sub_ref => sub {
+  return sub {}
 };
 
 sub register {
@@ -135,10 +133,17 @@ sub _json_content {
 
   if($c) {
 
-    $json->{url} = $c->req->url->to_abs;
-    $json->{component} = ref $c;
-    $json->{action} = $c->stash('action');
-    $json->{userId} = $self->user_id_sub_ref->($c);
+    for ($json->{context}) {
+      $_->{userAddr} = $c->tx->remote_address;
+      $_->{url} = $c->req->url->to_abs;
+      $_->{component} = ref $c;
+      $_->{action} = $c->stash('action');
+      if (my $u = $self->user_sub_ref->($c)) {
+        $_->{user} = $u;  
+      }
+    }
+
+    ##$json->{userId} = $self->user_id_sub_ref->($c);
 
     $json->{environment} = { map { $_ => "".$c->req->headers->header($_) } (@{$c->req->headers->names}) };
     $json->{params} = { map { $_ => string_dump($c->param($_))  } ($c->param) };
