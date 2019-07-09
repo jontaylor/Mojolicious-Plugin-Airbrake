@@ -7,7 +7,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::UserAgent;
 use Data::Dumper;
 
-our $VERSION = '0.02-s1';
+our $VERSION = '0.02-s2';
 
 has 'api_key';
 has 'airbrake_base_url' => 'https://airbrake.io/api/v3/projects/';
